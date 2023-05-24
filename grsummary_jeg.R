@@ -379,8 +379,6 @@ compareGrsummary <- function (dat, nomvarcont=NULL, nomvarcat=NULL, nomvargroup=
     result <- compareGroups(formula, data = dat, show.all = TRUE)
   }
   
-  # Display html
-  export
   
   # Return a descriptive table
   return(createTable(result))
