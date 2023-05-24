@@ -15,7 +15,7 @@ grsummary <- function (dat, nomvarcont=NULL, nomvarcat=NULL, nomvargroup=NULL,te
   nbnonmissgr <- function(var) {sum(!is.na(var))}
   
   ##########################################################
-  ##### La variable "nomvargroup" doit être codé en facteur#
+  ##### La variable "nomvargroup" doit Ãªtre codÃ© en facteur#
   ##########################################################
   
   dat<-droplevels(dat)
@@ -164,13 +164,13 @@ grsummary <- function (dat, nomvarcont=NULL, nomvarcat=NULL, nomvargroup=NULL,te
   }
   
   ###################################################
-  ### Code en présence de variable "nomvargroup" ####
+  ### Code en prÃ©sence de variable "nomvargroup" ####
   ###################################################
   else {
     som = aggregate(rep(1, nrow(dat)), list(group = dat[,names(dat) == nomvargroup]), sum)
     names(som)[2] = "N"
     
-    ### Code en présence de "nomvarcont"
+    ### Code en prÃ©sence de "nomvarcont"
     if (is.null(nomvarcont) == FALSE & sum(nomvarcont %in%  names(dat)) == length(nomvarcont)) {
       i=1
       while (i < length(nomvarcont) + 1) {
@@ -231,7 +231,7 @@ grsummary <- function (dat, nomvarcont=NULL, nomvarcat=NULL, nomvargroup=NULL,te
       }
     }
     
-    ### Code en présence de "nomvarcat"
+    ### Code en prÃ©sence de "nomvarcat"
     if (is.null(nomvarcat) == FALSE & sum(nomvarcat %in%  names(dat)) == length(nomvarcat)) {
       
       for(i in nomvarcat) dat[,i]<-as.factor(as.character(dat[,i]))
@@ -272,7 +272,7 @@ grsummary <- function (dat, nomvarcont=NULL, nomvarcat=NULL, nomvargroup=NULL,te
         ########## Test sur les variables #############
         ###############################################
         
-        ## Si plus de 5 modalité, pas de tests
+        ## Si plus de 5 modalitÃ©, pas de tests
         if(dim(table(dat[, names(dat) == nomvarcat[i]], dat[, names(dat) == nomvargroup]))[1] > 5 | 
            dim(table(dat[, names(dat) == nomvarcat[i]], dat[, names(dat) == nomvargroup]))[1] < 2){
           test.type.p[1, 2] = "Not done"
@@ -324,7 +324,7 @@ grsummary <- function (dat, nomvarcont=NULL, nomvarcat=NULL, nomvargroup=NULL,te
     }
     
     ############################
-    ### Sortie des résultats ###
+    ### Sortie des rÃ©sultats ###
     ############################
     
     ### Uniquement "nonvarcat"
@@ -356,3 +356,33 @@ grsummary <- function (dat, nomvarcont=NULL, nomvarcat=NULL, nomvargroup=NULL,te
     res
   }
 }
+
+
+
+
+
+### Suggestion ###
+
+library(compareGroups)
+compareGrsummary <- function (dat, nomvarcont=NULL, nomvarcat=NULL, nomvargroup=NULL,testcat=NULL) {
+  if (is.null(nomvargroup)) {
+  
+    if (is.null(nomvarcont) & is.null(nomvarcat)) {
+      stop("At least one categorical or continuous variable must be specified")
+    }
+    
+    # Create the formula for compareGroups
+    vars <- c(nomvarcont, nomvarcat)
+    # if nomvargroup is not specified then is.null(nomvargroup) , formula will still work
+    formula <- as.formula(paste( ifelse(is.null(nomvargroup), "",nomvargroup) , " ~ ", paste(vars, collapse = " + ")))
+    
+    result <- compareGroups(formula, data = dat, show.all = TRUE)
+  }
+  
+  # Display html
+  export
+  
+  # Return a descriptive table
+  return(createTable(result))
+}
+
