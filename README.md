@@ -1,9 +1,9 @@
 ### Main Files:
-1.	compute_outcomes.R
+1.	compute_outcomes.R *(Priority 2)*
 2.	syntaxe_mise_cond_prev5.R
 3.	variable_classiques.R
 4.	secondTX2023.R
-5.	survcum.R 
+5.	survcum.R *(Priority 1)*
 8.	Analysis.QMD: contient les chunks *summary statistics*, et *mise en page cox* (à optimiser sous forme de fonction), + mettre en place 2 templates (Squelette étude comparative, étude prédictive facteurs de risque) 
 9.	Dossier Dictionary: Fichiers des Regroupements des Traitments de Conditionnement et Prevention (à optimiser encore plus), + ajouter table correspondance labels.
 
