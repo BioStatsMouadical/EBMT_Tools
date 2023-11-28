@@ -2,7 +2,7 @@
 1.	compute_outcomes.R
 2.	syntaxe_mise_cond_prev5.R
 3.	variable_classiques.R
-4.	secondTX2020.R
+4.	secondTX2023.R
 5.	survcum.R 
 8.	Analysis.QMD: contient les chunks *summary statistics*, et *mise en page cox* (à optimiser sous forme de fonction), + mettre en place 2 templates (Squelette étude comparative, étude prédictive facteurs de risque) 
 9.	Dossier Dictionary: Fichiers des Regroupements des Traitments de Conditionnement et Prevention (à optimiser encore plus), + ajouter table correspondance labels.
@@ -25,8 +25,8 @@ Ce fichier contient une seule fonction : variable_classique :
 
 a).	variable_classique : Cette fonction n’a que la base de données comme argument et calcule quelques variables dont j’ai eu précédemment besoin. Il faudrait que je la mette au propre.  
 
-###	secondTX2020.R
-Ce fichier contient une seule fonction : sectrans. Attention elle doit être appliquée sur une base de données où les greffes consécutives (ou précédentes) sont présentes en ligne.  
+###	secondTX2023.R
+Fonction à appliquer sur une base de données où les greffes consécutives (ou précédentes) sont présentes en ligne. (duplicate IDs)
 
 a).	sectrans : Cette fonction calcule le nombre de greffe par individu ainsi que le type de greffe, le diagnostic, la rechute, les GVH, l’engraftment des Poly pour chaque individu. Les nouvelles variables sont collées à chaque greffe avec les numéros allant de 1 à 5 correspondants au numéro de la greffe. Attention, j’ai un souci de format de date pour les greffes supérieur à 2. A regler.  
 
