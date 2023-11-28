@@ -17,8 +17,8 @@ e)	dcfunction : Calcule les causes de décès de différentes manières. Elle do
 
 ###	syntaxe_mise_cond_prev5.R
 Ce fichier contient deux fonctions :
-a)	prevcond : Le seul argument est la base de données. Cette fonction simplifie les labels des CONDDRUGX et PREVDRUGX. Elle concatène les médicaments du   conditionnement et la TBI. Similairement elle concatène les médicaments de la prévention de la GVH.
-b)	doseconddrug : Le premier argument est la base de données, le deuxième argument est « hypothese_treo », par défaut en FALSE, qui fait l’hypothèse d’un conditionnement myelo-ablatif pour une certaine dose de Treosulfan. Cette fonction calcule et transforme à la même unité les doses des médicaments du conditionnement. Par ailleurs, elle fournit une variable « MYELOABR » corrigé selon les doses des médicaments du conditionnement qui s’appelle « MYELOABRJEG » (attention aux hypothèses).
+  a)	prevcond : Le seul argument est la base de données. Cette fonction simplifie les labels des CONDDRUGX et PREVDRUGX. Elle concatène les médicaments du   conditionnement et la TBI. Similairement elle concatène les médicaments de la prévention de la GVH.
+  b)	doseconddrug : Le premier argument est la base de données, le deuxième argument est « hypothese_treo », par défaut en FALSE, qui fait l’hypothèse d’un conditionnement myelo-ablatif pour une certaine dose de Treosulfan. Cette fonction calcule et transforme à la même unité les doses des médicaments du conditionnement. Par ailleurs, elle fournit une variable « MYELOABR » corrigé selon les doses des médicaments du conditionnement qui s’appelle « MYELOABRJEG » (attention aux hypothèses).
 
 ###	variable_classiques.R
 Ce fichier contient une seule fonction : variable_classique (sans S ce qui n’est pas très futé) :
