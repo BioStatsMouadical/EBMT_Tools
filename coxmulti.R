@@ -1,3 +1,5 @@
+library(gtsummary)
+
 # Outcomes Survs formulas
 surv.form <-  c(OS = "Surv(SURVY,STATE)~",
                 PFS = "Surv(PFSY,STATEPFS)~ ",
