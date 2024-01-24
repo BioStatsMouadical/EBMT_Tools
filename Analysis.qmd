@@ -1,0 +1,1228 @@
+---
+title: "GVHD Prophylaxis with ATG or PTCy after alloSCT from unrelated donors *(Analysis)* "
+subtitle: "A STUDY FROM THE TRANSPLANT COMPLICATIONS WORKING PARTY (TCWP)"
+
+author: 
+  - name:  "P.I: **Olaf Penack**, MD, PhD"
+  - name: "Analysis: **Mouad Abouqateb**, **Christophe Peczynski**"
+
+format:
+ html:
+    toc-title: Contents
+    toc: true
+    toc-depth: 3
+    toc-expand: 4
+    toc-location: left 
+    number-sections: true
+    tbl-cap-location: top
+    fig-cap-location: top
+    fig-align: center
+    smooth-scroll: true
+    # self-contained-math: true
+    self-contained: true
+    embed-resources: true
+
+
+
+date-modified: last-modified  
+
+execute:
+  echo: false
+  warning: false
+  message: false
+ 
+
+
+---
+
+## Study population
+
+::: {.callout-note icon="false"}
+##### Included
+
+-   Adult patients (≥18 years of age)
+-   First allo-HSCT between 1st January 2018 and 30th June 2021
+-   Type of donor: MUD, MMUD (9/10 only)
+-   Hematologic malignancies: Acute leukemia, Chronic leukaemia, Myelodysplastic/Myeloproliferative syndromes (MDS/MPN), Lymphoma.
+-   Cell source: PB only
+:::
+
+::: {.callout-note icon="false"}
+##### Excluded
+
+-   More than one previous Auto
+-   Combined ATG & PTCy
+-   Campath use
+-   Ex-vivo T-cell depletion
+-   Non applicable DRI
+:::
+
+::: {.callout-warning icon="false"}
+##### Outcomes:
+
+-   Non Relapse Mortality (NRM) defined as death from any cause without evidence of relapse.
+-   Overall survival (OS) defined as time to death from any cause.
+-   Relapse incidence (RI) defined as time to first event of relapse of continuous progression.
+-   Progression Free Survival (PFS) defined as survival with no evidence of relapse.
+-   Acute GVHD (aGVHD) incidence and severity graded according to the modified Glucksberg criteria.
+-   Chronic GVHD (cGVHD) incidence and severity graded according to the revised Seattle criteria.
+-   GVHD-free relapse-free survival (GRFS) defined as first event of aGVHD-III/IV, Extensive Chronic GVHD, Relapse or Death.
+:::
+
+All endpoints were measured from the time of transplantation.
+
+```{r Required Packages }
+#| echo: false
+#| results: false
+#| warning: false
+#| message: false
+
+library(ggsurvfit)
+library(survival)
+library(arsenal)
+library(forcats)
+library(Hmisc)
+library(rms)
+library(tidycmprsk)
+library(cmprsk)
+library(kableExtra)
+library(gtsummary)
+#library(prodlim)
+#    embed-resources: true
+#df-print: kable
+```
+
+<!-- Visual options in progress (non executable) -->
+
+```{r }
+#| execute: false
+#| echo: false
+#| results: false
+#| warning: false
+#| message: false
+# eval: false
+
+   # toc-title: Contents
+   # toc: true
+   # toc-depth: 3
+   # number-sections: true
+   # tbl-cap-location: top
+   # toc-expand: 3
+   # self-contained: true
+   # standalone: true
+   # smooth-scroll: true
+   # 
+
+
+  # - name: "*Charité Universitätsmedizin Berlin, Germany*"
+  # - name:  "Statisticians: **Mouad Abouqateb**, **Christophe Peczynski**" 
+  # - name:  "*EBMT Statistical Unit, Paris, France*"
+  #  
+knitr::opts_chunk$set(   echo= FALSE,
+  warning=  FALSE,
+  message = FALSE,  fig.height=9, fig.width = 9,  fig.align ='center', label.prefix = c(table = 'tab:')
+)
+
+knit_print.data.frame = function(x, ...) {
+  res = paste(c("", "", knitr::kable(x)), collapse = "\n")
+  knitr::asis_output(res) %>% kable_styling(bootstrap_options ="basic", full_width = F,position = "center",font_size = 9,html_font ="arial")# %>% #kable_paper(lightable_options ="basic", position = "center", full_width = F,font_size = 9,html_font ="arial") 
+}
+
+registerS3method(
+  "knit_print", "data.frame", knit_print.data.frame,
+  envir = asNamespace("knitr")
+)
+
+#fig.show: 'hold' 
+```
+
+```{r Required Functions and Data}
+pathfonction <- "C:/Users/7046803/Desktop/TCWP/Syntaxe/"
+
+#Function file names
+functions <- c('impute_grfs_NAs.R',
+               'survcum.R',
+               'compute_outcomes.R', 
+               'syntaxe_mise_cond_prev5.R',
+               'variable_classiques.R', 
+               'coxmulti_JEG.R', 
+               'secondTX2020.R',
+               'cyto2022.R')
+
+
+for(fun in functions) {
+  source(file.path(pathfonction, fun))
+}
+
+
+load( file="C:/Users/7046803/Desktop/TCWP/ATG_PTCy/Data/Data_7th_final_flowchart_11July.RData")
+```
+
+```{r DataManagement Supp}
+
+Data_ADULT_MAL_UD_7$CONDITIONING_REGIMEN[!is.na(Data_ADULT_MAL_UD_7$CONDITIONING_REGIMEN) &   Data_ADULT_MAL_UD_7$CONDITIONING_REGIMEN== "other"]<- "Other"
+
+#Adjustement DRI in three Classes
+Data_ADULT_MAL_UD_7$DRI_adj <- Data_ADULT_MAL_UD_7$DRI
+Data_ADULT_MAL_UD_7$DRI_adj[Data_ADULT_MAL_UD_7$DRI_adj=="Very high" ] <- "High_VeryHigh"
+Data_ADULT_MAL_UD_7$DRI_adj[Data_ADULT_MAL_UD_7$DRI_adj=="High" ] <- "High_VeryHigh"
+
+
+#Formating to factor
+Data_ADULT_MAL_UD_7$DRI_adj <- factor(Data_ADULT_MAL_UD_7$DRI_adj, levels= c("Low","Int","High_VeryHigh")) 
+Data_ADULT_MAL_UD_7$DRI <- factor( Data_ADULT_MAL_UD_7$DRI, levels= c("Low","Int","High","Very high")) 
+Data_ADULT_MAL_UD_7$CMVDP1<- factor(Data_ADULT_MAL_UD_7$CMVDP1, levels = levels(Data_ADULT_MAL_UD_7$CMVDP1)[c(4,3,2,1)])
+Data_ADULT_MAL_UD_7$Previous_AutoSCT <- as.factor(ifelse(Data_ADULT_MAL_UD_7$BMTNR ==  "First" , "No", "Yes"))
+#Myeloabr X TBI
+
+
+#Conditionning Variables
+Data_ADULT_MAL_UD_7$CONDITIONING_REGIMEN[
+  which(  Data_ADULT_MAL_UD_7$CONDITIONING_REGIMEN== "Trop de regroupement" &   (Data_ADULT_MAL_UD_7$COND4 %in%  c("BuFlu","BuFlu+IntrathecalChemo")))]   <- "BuFlu based"
+
+
+Data_ADULT_MAL_UD_7$CONDITIONING_REGIMEN[
+ which(  Data_ADULT_MAL_UD_7$CONDITIONING_REGIMEN== "Trop de regroupement" &(  
+    Data_ADULT_MAL_UD_7$COND4 %in% c("Bu" ,"Bu+Arac")))
+]   <- "Other"
+
+
+# Missing VCLAND variables
+Data_ADULT_MAL_UD_7$VCENLAND <- as.character(Data_ADULT_MAL_UD_7$VCENLAND)
+Data_ADULT_MAL_UD_7$VCENLAND[which(Data_ADULT_MAL_UD_7$CENTRE%in%c("Debrecen [University]","Budapest [National Med Ctr]"))] <- "Romania"
+Data_ADULT_MAL_UD_7$VCENLAND[which(Data_ADULT_MAL_UD_7$CENTRE == "Zagreb [Univ H Rebro]") ]  <- "Croatia"
+Data_ADULT_MAL_UD_7$VCENLAND[which(Data_ADULT_MAL_UD_7$CENTRE == "Belgrade [UnivClinical Ctr]") ]  <- "Serbia"
+Data_ADULT_MAL_UD_7$VCENLAND[which(Data_ADULT_MAL_UD_7$CENTRE %in%c("Vienna [St Anna]","Vienna [Medizinische Univ]","Linz [Elisabethinen H]")) ]  <- "Austria"
+Data_ADULT_MAL_UD_7$VCENLAND[which(Data_ADULT_MAL_UD_7$CENTRE == "Sao_Paulo [H Sirio-Libanes]") ]  <- "Brazil"
+Data_ADULT_MAL_UD_7$VCENLAND[which(Data_ADULT_MAL_UD_7$CENTRE == "Copenhagen [Rigshospitalet]") ]  <-"Dannemark"
+Data_ADULT_MAL_UD_7$VCENLAND[which(Data_ADULT_MAL_UD_7$CENTRE == "Johannesburg [Olivedale H]") ]  <-"SouthAfrica"
+Data_ADULT_MAL_UD_7$VCENLAND[which(Data_ADULT_MAL_UD_7$CENTRE == "Johannesburg [WDGMC]") ]  <-"SouthAfrica"
+Data_ADULT_MAL_UD_7$VCENLAND[which(Data_ADULT_MAL_UD_7$CENTRE == "Suzhou [First Soochow]") ]  <-"China"
+Data_ADULT_MAL_UD_7$VCENLAND[which(Data_ADULT_MAL_UD_7$CENTRE =="Bratislava [Univ H]" ) ]  <-"Slovakia"
+
+```
+
+```{r Setups & Summary Labels}
+
+varsociodem <-c("PATSEX",
+               # "DIAGRFM",
+                "factor(YEARTX)",
+               "YEARTX",
+          #      "DATBMT",
+                "AGETX",
+                "AGEDIAG",
+                "KARN90",
+                "SORROR.CL")
+
+vardiseasespec <-c("DRI",
+                   "DISEASE",
+                   "DISMCLFD_MAIN")
+
+
+
+varhsct <-c( "HSCTYPE",#Previous Auto
+             "BMTNR", #HSCT Number
+          #   "STEMCEDO1_D1P1",#Cell source
+             "DONSEX1",#Donnor sex
+             "AGEDONYR_DO1")#Donnor age
+
+
+varcondchemo<-c(  "MYELOABRJEG",
+                  "VRADICON", #TBI
+                  "DISEASE_SPE",#Disease Specific Remission
+            #     "BMTDISESTAJEG2022",
+            #     "INVIVOJEG",
+            #     "PTCYEP",
+                  "PREVENTION_REGIMEN",
+                  "CONDITIONING_REGIMEN",
+                  #,"COND4"
+                  # "NRIND",
+                  "VCENLAND"
+                  #,"CENTREJEGEP"
+)
+
+vars <- c(varsociodem, vardiseasespec ,varhsct ,varcondchemo)
+
+labels <- c(AGETX = 'Age at Transplant, yrs',AGEDIAG= 'Age at Diagnosis, yrs',  PATSEX  = "Patient Gender", DIAGRFM="Duration Diagnostic to HSCT, months", "factor(YEARTX)"="Transplant Year", YEARTX ="Transplant Year, yrs", VRADICON = "TBI","fct_infreq(DISEASE)" ="Hematological Malignancies", MYELOABRJEG = "Myeloablative Conditioning", DISEASE_SPE = "Disease Specific Remission","fct_infreq(DISEASE)" ="Hematological Malignancies", "fct_infreq(DISEASE_SPE)" = "Disease Specific Remission Status" ,KARN90 = "Karnofsky =>90", PREVENTION_REGIMEN = 'Prevention Regimen',"fct_infreq(CONDITIONING_REGIMEN)"	 = 'Conditioning Regimen',
+DONSEX1 = "Donor Sex", "fct_infreq(PREVENTION_REGIMEN)" = "GVHD Prevention Regimen", "fct_infreq(VCENLAND)" = "Center Country", SORROR.CL = "SORROR Comorbidity Index", HSCTYPE = "Type of Donor" , CMVDP1 = "Donor to Patient CMV positivity", DRI_ADJ = "Disease Risk Index (DRI)")
+
+
+mycontrols  <- tableby.control(test=TRUE, total=TRUE,digits = 1,digits.pct = 1,digits.p = 2,
+                               numeric.test="kwt", 
+                               cat.test="chisq",
+                               numeric.stats=c( "medianq1q3","range","Nmiss"),
+                               cat.stats=c("countpct","Nmiss"),
+                               stats.labels=list(Nmiss='Missing count', medianq1q3=' median [Q1, Q3]', range='[Min, Max]'))
+
+
+
+set_gtsummary_theme(theme_gtsummary_journal("jama"))
+set_gtsummary_theme(theme_gtsummary_compact())
+
+```
+
+## Descriptive analysis
+
+Median values, inter-quartiles ranges \[Q1, Q3\], and minimum and maximum \[Min, Max\] were used to express continuous variables while frequencies and percentages were used for categorical variables.
+
+Patient-, disease-, and transplant-related variables within each HLA arm were compared between PTCy and ATG group using the Chi-squared test for categorical variables, and the Kruskal-Wallis rank test for continuous variables.
+
+::: panel-tabset
+### Overal Population N= 10887
+
+```{r, results = 'asis'}
+
+
+tab2 <- tableby(    ATG_PTCY ~ PATSEX  + AGETX + AGEDIAG + KARN90 + SORROR.CL + DRI + HSCTYPE +  notest(fct_infreq(DISEASE))+  
+                  + factor(YEARTX)+YEARTX+ CMVDP1 +
+                  Previous_AutoSCT + DONSEX1# + notest(AGEDONYR_DO1) 
+                + MYELOABRJEG + VRADICON + 
+                  notest(fct_infreq(DISEASE_SPE)) + notest(fct_infreq(PREVENTION_REGIMEN)) + notest(fct_infreq(CONDITIONING_REGIMEN)) +  notest(fct_infreq( VCENLAND))
+                , data= Data_ADULT_MAL_UD_7, control=mycontrols,test = FALSE )
+
+
+summary(tab2,
+        labelTranslations=labels
+        , pfootnote=TRUE, 
+        title="\\\  Table. Baseline patient-, donor- and transplant-related characteristics stratified by graft-versus-host disease prevention strategy. ")
+
+
+
+
+```
+
+### MUD group N= 8764
+
+```{r, results = 'asis'}
+
+tab_MUD <- tableby(    ATG_PTCY ~ PATSEX  + AGETX + AGEDIAG + KARN90 + SORROR.CL + DRI +fct_infreq(DISEASE)+ 
+                  CMVDP1+Previous_AutoSCT + DONSEX1# + notest(AGEDONYR_DO1) 
+              + factor(YEARTX)+YEARTX+ CMVDP1 + MYELOABRJEG + VRADICON + 
+                  notest(fct_infreq(DISEASE_SPE)) + notest(fct_infreq(PREVENTION_REGIMEN)) + notest(fct_infreq(CONDITIONING_REGIMEN)) +  notest(fct_infreq( VCENLAND))
+                , data=  droplevels(Data_ADULT_MAL_UD_7[Data_ADULT_MAL_UD_7$HLA=="MUD_10",]), control=mycontrols)
+
+
+summary(tab_MUD,
+        labelTranslations=labels
+        , pfootnote=TRUE, 
+        title="\\\  Table. Baseline patient-, donor- and transplant-related characteristics stratified by graft-versus-host disease prevention strategy in *MUD group*. ")
+
+
+```
+
+### MMUD group N= 2123
+
+```{r, results = 'asis'}
+
+
+tab_MMUD <- tableby(     ATG_PTCY ~ PATSEX  + AGETX + AGEDIAG + KARN90 + SORROR.CL + DRI + fct_infreq(DISEASE)
+                  + Previous_AutoSCT + DONSEX1# + notest(AGEDONYR_DO1) 
+              + factor(YEARTX) +YEARTX+ CMVDP1 + MYELOABRJEG + VRADICON + 
+                  notest(fct_infreq(DISEASE_SPE)) + notest(fct_infreq(PREVENTION_REGIMEN)) + notest(fct_infreq(CONDITIONING_REGIMEN)) +  notest(fct_infreq( VCENLAND))
+               
+                , data=  droplevels(Data_ADULT_MAL_UD_7[Data_ADULT_MAL_UD_7$HLA=="MMUD_9",]), control=mycontrols)
+
+
+summary(tab_MMUD,
+        labelTranslations=labels
+        , pfootnote=TRUE, 
+        title="\\\  Table. Baseline patient-, donor- and transplant-related characteristics stratified by graft-versus-host disease prevention strategy in *MMUD group*. ")
+```
+:::
+
+```{r Death Causes DataManagement}
+#| results: false
+
+# 
+# 
+# prodlim(Hist(PFSY,CRELAPSE)~GROUP,data=indata)
+# (PFSY,CRELAPSE)~GROUP
+# Surv(PFSY,STATEPFS)~GROUP
+# 
+# 
+# "PREVIOUS_AUTOSCT"   "STATE"              "SURV"               "RELAPSE"            "PFS"             
+# "STATEPFS"           "STATETRM"           "CRELAPSE"           "CTOXI"              "AGVH"            
+#  "AGVH1"              "AGVH2"              "AGVH3"              "BMTAGVH"            "BMTAGV1"        
+#  "BMTAGV2"            "BMTAGV3"            "CAGVH"              "CAGVH1"             "CAGVH2"         
+#  "CAGVH3"             "CGVH"               "CGVHGR"             "CGVHGRNIH"          "CGVHEXT"        
+# "BMTCGVH"            "BMTCGVHLIM"         "BMTCGVHEXT"         "BMTCGVHMOD"         "CGVH_NO_IMPUTED"  
+# "CGVHEXT_NO_IMPUTED" "CCGVH"              "CCGVHEXT"           "DPOLY1"             "LEUC1"            
+#  "DPL20"              "DPL50"              "EPLAT20"            "EPLAT50"            "ENGRAFC"        
+#  "ENGRAFC2"           "LOSSGRAFT"          "DELGRAFTLOSS"       "EPOLY1"             "CPOLY1"         
+#  "CPLAT50"            "CPLAT20"            "DPOLY100"           "EPOLY100"           "CPOLY100"       
+#  "DPOLY30"            "EPOLY30"            "CPOLY30"            "CONSECTX"           "DELCONSECTX"    
+#  "SURVY"              "SURVM"              "PFSY"               "PFSM"               "BMTCGVHM"       
+#  "BMTCGVHY"           "BMTCGVHEXTM"        "BMTCGVHEXTY"       
+
+
+library(stringr)
+
+indata<-compute_outcomes(Data_ADULT_MAL_UD_7)
+indata<-compute_outcomes(indata,compete_relapse = TRUE,impute_relapse = FALSE)
+indata<-dcfunction(indata)
+#indata<-compute_outcomes(indata,impute_relapse = TRUE,compete_consecTX_engneut = TRUE)
+#indata<-compute_outcomes(indata,impute_relapse = TRUE,compete_consecTX_engneut =FALSE)
+
+  
+indata<- impute_agvhd_delay_calcul_grfs(indata)
+
+
+indata$DC_UPDATED <- indata$DC_TOT_all2
+indata$DC_UPDATED[ grepl( "OrigDisease", indata$DC_UPDATED)] <- "Original Disease"
+indata$DC_UPDATED[ grepl( "HSCT related__GVHD" , indata$DC_UPDATED)] <- "GVHD"
+indata$DC_UPDATED[ grepl( "GVHD" , indata$DC_UPDATED)] <- "GVHD"
+indata$DC_UPDATED[ grepl( "HSCT related__Inf" , indata$DC_UPDATED)] <- "Infection"
+indata$DC_UPDATED[ grepl( "Inf" , indata$DC_UPDATED)] <- "Infection"
+indata$DC_UPDATED[ grepl( "Secondary malignancy" , indata$DC_UPDATED)] <- "Secondary malignancy"
+indata$DC_UPDATED[ grepl( "HSCT related" , indata$DC_UPDATED)] <- "Other HSCT related"
+
+for( i in names(sort(table(indata$DC_UPDATED))[sort(table(indata$DC_UPDATED))<10])){
+  indata$DC_UPDATED[ indata$DC_UPDATED == i] <- "Other"
+}
+
+```
+
+::: {.callout-tip icon="false"}
+##### In Summary
+
+-   An overall of $10894$ patient were included, from which $2123$ received MMUD alloHSCT and $8764$ received MUD alloHSCT,
+
+-   There's higher use of ATG than PTCy, with about $72\%$ ATG only use in MMUD and $88\%$ ATG only use in MUD.
+
+    -   Germany and France where ATG use is more pronounced cover almost half the population.
+
+-   Patients in the PTCY arm were younger, undergone allo-HSCT more recently, and have less disease severity across both groups.
+:::
+
+
+
+Survival analysis will be conducted on each donor type group separately
+------------------------------------------------------------------------
+## MMUD Survival Analysis:
+
+### Survival outcomes
+
+#### Non Adjusted Analysis
+
+The probabilities of overall survival (OS) and progression-free survival (PFS) and GRFS were calculated using the Kaplan-Meier (KM) estimator.
+
+Incidence of non-relapse mortality (NRM), relapse incidence (RI), Acute and Chronic GVHD incidence (aGVH & CGVHD) were calculated using the cumulative incidence (CI) function in a competing risk setting.[^1] [^2]
+
+[^1]: Gray RJ (1988) A class of K-sample tests for comparing the cumulative incidence of a competing risk, Annals of Statistics, 16:114
+
+[^2]: Confidence intervals for cumulative incidence estimates were calculated using the formula: $$x^{exp(±z * se / (x * log(x)))}$$ where $x$ is the cumulative incidence estimate, $se$ is the standard error estimate, and $z$ is the z-score associated with the confidence level of the interval, $z=1.96$ for a 95% CI.
+
+::: {.callout-note icon="false"}
+##### Competing risks
+
+-   NRM, the competing risk was relapse.
+-   RI, the competing risk was death without relapse.
+-   Acute and chronic GVHD the competing risks were relapse and death.
+:::
+
+Median follow-up was calculated using the reverse KM method.
+
+```{r}
+#| message: false
+#| error: false
+#| results: false
+
+HLA_CLASS <- "MMUD_9"
+
+survcum_ATG_MUD <- survcum(indata[indata$HLA==HLA_CLASS & indata$ATG_PTCY =="ATG_only",])
+survcum_PTCy_MUD <- survcum(indata[indata$HLA==HLA_CLASS& indata$ATG_PTCY == "PTCY_only",])
+
+```
+
+```{r Survival at TimePoints}
+
+#,caption="**Survival outcomes**"
+# set_gtsummary_theme(theme_gtsummary_journal("jama"))
+# set_gtsummary_theme(theme_gtsummary_compact())
+
+rows = c(1,15,14,2,3,13,11,12,17,18)
+
+inc <- cbind(survcum_ATG_MUD[rows, 1], survcum_ATG_MUD[rows, c(2,4)], survcum_PTCy_MUD[rows, c(2,4)])
+
+row.names(inc) <- NULL
+
+knitr::kable( inc, col.names = c(" ", "ATG count", "ATG (IC95%)", "PTCy count", "PTCy (IC95%)") )%>%
+  column_spec(1, bold = T ) %>%   kable_styling(bootstrap_options ="basic", full_width = F,font_size = 9,html_font ="arial", position = "float_left") %>% footnote(general = c("d, day; y, year;", "FU, follow up; PFS, progression free survival; NRM, non, relapse mortality; OS, overall survival; RI, relapse incidence."))
+
+# 
+# 
+# survcum(Data_ADULT_MAL_UD_7)
+# 
+
+
+# summary(tableby(ATG_PTCY ~ Surv(SURVY,STATE), data=indata, times=0:2, surv.stats=c( "NriskSurv","NeventsSurv","medSurv")))
+#survival::survfit
+
+
+
+```
+
+#### Mortality and relapse related outcomes (Kaplan-Meier & Cumulative Incidence)
+
+```{r Kaplan Meier Related}
+OS <- survfit2(Surv(SURVY,STATE)~ ATG_PTCY ,data=indata[indata$HLA==HLA_CLASS,])
+PFSY <- survfit2(Surv(PFSY,STATEPFS)~ ATG_PTCY ,data=indata[indata$HLA==HLA_CLASS,])
+GRFS <- survfit(Surv(BMTGRFSY,GRFS)~ ATG_PTCY ,data=indata[indata$HLA==HLA_CLASS,])
+#RI
+```
+
+```{r OS}
+#| fig-cap: !expr glue::glue("            Overall Survival within ", HLA_CLASS)
+
+ggsurvfit(OS)+ add_quantile(y_value = NULL, x_value =2 ) + ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs( x = "Time, years") 
+```
+
+```{r PFS}
+#| fig-cap: !expr glue::glue("            Progression Free Survival (PFS) within ", HLA_CLASS)
+ggsurvfit(PFSY)+ add_quantile(y_value = NULL, x_value =2 ) + ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs(  x = "Time, years"  )  #+ theme_ggsurvfit_KMunicate() 
+
+```
+
+```{r}
+#| fig-cap: !expr glue::glue("            GVHD-free relapse-free survival within ", HLA_CLASS)
+
+ggsurvfit(GRFS)+ add_quantile(y_value = NULL, x_value =2 ) + ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs( x = "Time, years")  #+ theme_ggsurvfit_KMunicate() 
+
+```
+
+```{r }
+#| fig-cap: !expr glue::glue("            Non Relapse Mortality within ", HLA_CLASS)
+
+tidycmprsk::cuminc(Surv(PFSY,factor(CRELAPSE))~ATG_PTCY,data=indata[indata$HLA==HLA_CLASS,]) %>% ggcuminc(outcome =  c("2"))+ ggplot2::scale_y_continuous(limits = c(0,1))+ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs(
+  x = "Time, years"
+  ) 
+```
+
+```{r }
+#| fig-cap: !expr glue::glue("            Relapse Incidenc within ", HLA_CLASS)
+
+tidycmprsk::cuminc(Surv(PFSY,factor(CRELAPSE))~ATG_PTCY,data=indata[indata$HLA==HLA_CLASS,]) %>% ggcuminc(outcome =  c("1"))+ ggplot2::scale_y_continuous(limits = c(0,1))+ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs(
+  x = "Time, years") 
+```
+
+#### GVH Related Outcomes (Cumulative Incidence)
+
+```{r }
+#| fig-cap: !expr glue::glue("            CGVH within  ", HLA_CLASS)
+
+tidycmprsk::cuminc(Surv(BMTCGVHY,factor(CCGVH))~ATG_PTCY,data=indata[indata$HLA==HLA_CLASS,]) %>%
+  ggcuminc(outcome =  c("1"))+ ggplot2::scale_y_continuous(limits = c(0,1))+ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs(
+  x = "Time, years" ) 
+```
+
+```{r }
+#| fig-cap: !expr glue::glue("            CGVH EXT within ", HLA_CLASS)
+
+tidycmprsk::cuminc(Surv(BMTCGVHEXTY,factor(CCGVHEXT))~ATG_PTCY,data=indata[indata$HLA==HLA_CLASS,]) %>% ggcuminc(outcome =  c("1"))+ ggplot2::scale_y_continuous(limits = c(0,1))+ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs( x = "Time, years") 
+```
+
+```{r }
+#| fig-cap: !expr glue::glue("            Acute GVH Grade III/IV ", HLA_CLASS)
+
+tidycmprsk::cuminc(Surv(BMTAGV3,factor(CAGVH3))~ATG_PTCY,data=indata[indata$HLA==HLA_CLASS,]) %>% ggcuminc(outcome =  c("1"))+ ggplot2::scale_y_continuous(limits = c(0,1))+ ggplot2::scale_x_continuous(limits = c(0,200)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs(x = "Time, days") 
+```
+
+```{r }
+#| fig-cap: !expr glue::glue("            Acute GVH Grade II/IV ", HLA_CLASS)
+
+tidycmprsk::cuminc(Surv(BMTAGV2,factor(CAGVH2))~ATG_PTCY,data=indata[indata$HLA==HLA_CLASS,]) %>%
+  ggcuminc(outcome =  c("1"))+ ggplot2::scale_y_continuous(limits = c(0,1))+ ggplot2::scale_x_continuous( limits = c(0,200)) + add_risktable(
+  risktable_stats = "{n.risk}", 
+  stats_label =  "At Risk"  
+) + labs( 
+     x = "Time, days"
+  ) 
+
+```
+
+### Death Causes
+
+<!-- original disease, gvhd, infection, other HSCT related -->
+
+```{r}
+
+#indata <- dcfunction(indata)
+tbl_summary(
+    indata[indata$STATE==1 & indata$HLA==HLA_CLASS ,]%>% droplevels(),
+    include = c(DC_UPDATED ),
+    label = list(DC_UPDATED ~ "Categories"),
+    statistic =  all_categorical() ~ "{n} ({p}%)",
+    digits = all_categorical() ~ c(1, 2),
+    sort = list(everything() ~ "frequency"),
+    by = ATG_PTCY, # split table by group
+    missing = "ifany" # don't list missing data separately
+  ) %>%  modify_header(label = "**Causes**") %>% # update the column header
+  bold_labels()
+
+#reset_gtsummary_theme()
+#,VOD ~ "veno-occlusivedisease of the liver."
+```
+
+### Multivariate Cox Survival Analysis
+
+Multivariate analyses were performed using the Cox proportional-hazards regression model. Relevent variables differing significantly between the two comparison groups and known, or potential risk factors were included in the multivariate models. Results were expressed as the hazard ratio (HR) with a 95% confidence interval (95% CI). To test for a potential center effect, we introduced a random effect or "frailty" for each center into each multivariate model.
+
+#### Mortality and Progression related outcomes
+
+```{r Cox Models Building}
+covars.adj <- c("ATG_PTCY","frailty(CENTRE)", "PATSEX"  ,"DONSEX1" ,  "AGETX",  "KARN90" ,  "DRI_ADJ" , "YEARTX","CMVDP1", "VRADICON","MYELOABRJEG" )
+
+
+surv.form <-  c(OS = "Surv(SURVY,STATE)~",
+                PFS = "Surv(PFSY,STATEPFS)~ ",
+                RI = "Surv(PFSY,factor(CRELAPSE))", #1
+                NRM ="Surv(PFSY,factor(CRELAPSE))", #2
+                GRFS ="Surv(BMTGRFSY,GRFS)",
+                CGVH = "Surv(BMTCGVH,factor(CCGVH))~", #"1" 
+                CGVH_EXT = "Surv(BMTCGVHEXT,factor(CCGVHEXT))~", #"1"
+                CAGVH34 = "(Surv(BMTAGV3,factor(CAGVH3))~", #"2" 
+                CAGVH24 = "(Surv(BMTAGV2,factor(CAGVH2))~" #"2" 
+)
+
+#Overall Survival
+event = "Surv(SURVY,STATE)~"
+cox_OS_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+
+
+
+survminer::ggcoxzph(survival::cox.zph(survival::coxph(Surv(SURVY,STATE)~ATG_PTCY +  KARN90,data = indata[indata$HLA==HLA_CLASS,])))
+
+
+#Progression Free Survival
+event = "Surv(PFSY,STATEPFS)~ "
+cox_PFS_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+
+#GRFS
+event = "Surv(BMTGRFSY,GRFS)~ "
+cox_GRFS_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+
+
+#Non Relapse Mortality
+event = "Surv(PFSY,factor(CRELAPSE) == '2')~ "
+cox_NRM_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+
+#Relapse Incidence
+event = "Surv(PFSY,factor(CRELAPSE) == '1')~ "
+cox_RPSE_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+
+
+#CGVH
+event = "Surv(BMTCGVH,factor(CCGVH) == '1')~ "
+cox_CGVH_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+ 
+
+#CCGVHEXT
+event = "Surv(BMTCGVHEXT,factor(CCGVHEXT) == '1')~ "
+cox_CGVHEXT_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+ 
+#AGVH3
+ event ="Surv(BMTAGV3,factor(CAGVH3)== '1')~"
+ cox_AGVH3_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+#  
+# #AGVH2
+ event = "Surv(BMTAGV2,factor(CAGVH2)== '1')~"
+ cox_AGVH2_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+#  
+
+                # 
+                # CAGVH24 = "(Surv(BMTAGV2,factor(CAGVH2))~" #"2"
+ 
+
+```
+
+```{r}
+coxcoeff <- function(fit){ 
+  cox_model <- summary(fit)
+  frailty <-  any(grepl("frailty", row.names( cox_model$coefficients)))
+    
+  HR <- round( cox_model$conf.int[ ,"exp(coef)"] , 2)
+    HR.confint.lower <- round(cox_model$conf.int[,"lower .95"], 2)
+  HR.confint.upper <- round(cox_model$conf.int[,"upper .95"], 2)
+  
+  HR_txt <- paste0(HR, " (",HR.confint.lower, "-", HR.confint.upper, ")")
+  
+   return(cbind(Variable_level = row.names(cox_model$conf.int),HR_95CI = HR_txt))
+}
+
+
+cox_labels <- c(AGETX = 'Age at Transplant, yrs',  PATSEX  = "Patient Gender", "YEARTX"="Transplant Year", VRADICON = "TBI", MYELOABRJEG = "Myeloablative Conditioning", KARN90 = "Karnofsky =>90", DONSEX1 = "Donor Sex", CMVDP1 = "Donor to Patient CMV positivity", DRI_ADJ = "Disease Risk Index (DRI)")
+
+ 
+
+t1 <- cox_OS_9 %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty(")) %>% bold_labels() %>% bold_p(t = 0.05) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+#%>%  modify_caption("**Overall Survival MMUD** (N_events = {cox_OS_9$nevent})")
+
+t2 <- cox_PFS_9 %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.05) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+#%>% modify_caption("**PROGRESSION FREE Survival MMUD** (N_events = {cox_PFS_9$nevent})")
+
+
+
+t3 <- cox_NRM_9  %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.05) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+#%>% modify_caption("**Non Relapse Mortality** (N_events = {cox_NRM_9$nevent})")
+
+
+
+
+#Relapse Incidence
+#cox_RPSE_9 
+t4 <- cox_RPSE_9  %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.05) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+
+
+
+#Relapse Incidence
+#cox_RPSE_9 
+t5 <- cox_GRFS_9  %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.05) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+
+
+```
+
+```{r Merging output & Visuals}
+tbl_merge_ex1 <-tbl_merge(
+    tbls = list(t3,t4,t1, t2,t5),
+    tab_spanner = c("**Non Relapse Mortality NRM** *(N events = {cox_NRM_9$nevent})*","**Relapse Incidence RI** *(N events = {cox_RPSE_9$nevent})*","**Overall Survival OS** *(N events = {cox_OS_9$nevent})*", "**Progression Free Survival PFS** *(N events = {cox_PFS_9$nevent})*","**GRFS**  *(N events = {cox_GRFS_9$nevent})*")
+  )%>% modify_caption(paste0("**Multivariate Cox Analysis Survival Relapse Outcomes** ",HLA_CLASS))
+
+
+a<- tbl_merge_ex1  %>% as_gt() %>%  gt::tab_style(    style =  gt::cell_borders(
+  sides =c( "l"),color = "royalblue",weight = gt::px(0.1)
+),
+locations =  list(gt::cells_body(  columns = starts_with("estimate")))
+) %>%  gt::tab_style(    style =  list(gt::cell_borders(
+  sides =c("b", "t"),color = "red",weight = gt::px(0.2)
+),gt::cell_fill(color = "#F9E3D6")),
+
+locations =  list(gt::cells_body( rows = c(3))
+))
+```
+
+#### GVH related Outcomes
+
+```{r}
+t11 <- cox_CGVH_9 %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty(")) %>% bold_labels() %>% bold_p(t = 0.05) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+#%>%  modify_caption("**Overall Survival MMUD** (N_events = {cox_OS_9$nevent})")
+
+t22 <- cox_CGVHEXT_9 %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.05) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+#%>% modify_caption("**PROGRESSION FREE Survival MMUD** (N_events = {cox_PFS_9$nevent})")
+
+
+
+t33 <- cox_AGVH2_9  %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.05) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+ 
+
+#Relapse Incidence
+#cox_RPSE_9 
+t44 <- cox_AGVH3_9  %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.05) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+```
+
+```{r}
+tbl_merge_ex2 <-
+  tbl_merge(
+    tbls = list(t11, t22, t33, t44),
+    
+      tab_spanner = c("**CGVH** *(N events = {cox_CGVH_9$nevent})*", "**CGVH EXT** *(N events = {cox_CGVHEXT_9$nevent})*","**aGVH-II/IV** *(N events = {cox_AGVH2_9$nevent})*","**aGVH-III/IV** *(N events = {cox_AGVH3_9$nevent})*")
+  )%>% modify_caption(paste0("**Multivariate Cox Analysis GVH Outcomes** ", HLA_CLASS))
+
+
+
+
+tbl_merge_ex2  %>% as_gt() %>%  gt::tab_style(    
+  style =  gt::cell_borders(
+    sides =c( "l"),color = "royalblue",weight = gt::px(0.1)
+  ),
+  locations =  list(gt::cells_body(  columns = starts_with("estimate")))
+)%>%  gt::tab_style(    style =  list(gt::cell_borders(
+      sides =c("b", "t"),color = "red",weight = gt::px(0.2)
+    ),gt::cell_fill(color = "#F9E3D6")),
+    
+    locations =  list(gt::cells_body( rows = c(3))
+))
+```
+
+::: {.callout-tip icon="false"}
+ ## MMUD Adjusted Survival Analysis Results:
+
+-   PTCy alone demonstrated significantly better outcomes across three endpoints relatively to ATG: Overall Survival,Progression Free Survival, Non Relapse Mortality.
+
+-   No significant association with treatment strategy was apparent in GVH related Outcomes and Relapse Incidence.
+
+-   The observed hazard ratios are in the same direction as the previous outcomes, which could indicate either no difference or a potential lack of power due to fewer events related to these outcomes
+
+No relevant interaction term has been found.
+:::
+
+------------------------------------------------------------------------
+
+## MUD Survival Analysis:
+
+### Survival outcomes
+
+#### Non Adjusted Analysis
+
+```{r}
+#| message: false
+#| error: false
+#| results: false
+
+HLA_CLASS <- "MUD_10"
+
+survcum_ATG_MUD <- survcum(indata[indata$HLA==HLA_CLASS & indata$ATG_PTCY =="ATG_only",])
+survcum_PTCy_MUD <- survcum(indata[indata$HLA==HLA_CLASS& indata$ATG_PTCY == "PTCY_only",])
+
+```
+
+```{r Survival at TimePoints mud}
+
+#,caption="**Survival outcomes**"
+# set_gtsummary_theme(theme_gtsummary_journal("jama"))
+# set_gtsummary_theme(theme_gtsummary_compact())
+
+rows = c(1,15,14,2,3,13,11,12,17,18)
+
+inc <- cbind(survcum_ATG_MUD[rows, 1], survcum_ATG_MUD[rows, c(2,4)], survcum_PTCy_MUD[rows, c(2,4)])
+
+row.names(inc) <- NULL
+
+knitr::kable( inc, col.names = c(" ", "ATG count", "ATG (IC95%)", "PTCy count", "PTCy (IC95%)") )%>%
+  column_spec(1, bold = T ) %>%   kable_styling(bootstrap_options ="basic", full_width = F,font_size = 9,html_font ="arial", position = "float_left") %>% footnote(general = c("d, day; y, year;", "FU, follow up; PFS, progression free survival; NRM, non, relapse mortality; OS, overall survival; RI, relapse incidence."))
+
+# 
+# 
+# survcum(Data_ADULT_MAL_UD_7)
+# 
+```
+
+#### Mortality and relapse related outcomes (Kaplan-Meier & Cumulative Incidence)
+
+```{r Kaplan Meier Related mud}
+OS <- survfit2(Surv(SURVY,STATE)~ ATG_PTCY ,data=indata[indata$HLA==HLA_CLASS,])
+PFSY <- survfit2(Surv(PFSY,STATEPFS)~ ATG_PTCY ,data=indata[indata$HLA==HLA_CLASS,])
+GRFS <- survfit(Surv(BMTGRFSY,GRFS)~ ATG_PTCY ,data=indata[indata$HLA==HLA_CLASS,])
+#RI
+```
+
+```{r OS mud}
+#| fig-cap: !expr glue::glue("            Overall Survival within ", HLA_CLASS)
+
+ggsurvfit(OS)+ add_quantile(y_value = NULL, x_value =2 ) + ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs( x = "Time, years") 
+```
+
+```{r PFS mud}
+#| fig-cap: !expr glue::glue("            Progression Free Survival (PFS) within ", HLA_CLASS)
+ggsurvfit(PFSY)+ add_quantile(y_value = NULL, x_value =2 ) + ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs(  x = "Time, years"  )  #+ theme_ggsurvfit_KMunicate() 
+
+```
+
+```{r}
+#| fig-cap: !expr glue::glue("            GVHD-free relapse-free survival within ", HLA_CLASS)
+
+ggsurvfit(GRFS)+ add_quantile(y_value = NULL, x_value =2 ) + ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs( x = "Time, years")  #+ theme_ggsurvfit_KMunicate() 
+
+```
+
+```{r }
+#| fig-cap: !expr glue::glue("            Non Relapse Mortality within ", HLA_CLASS)
+
+tidycmprsk::cuminc(Surv(PFSY,factor(CRELAPSE))~ATG_PTCY,data=indata[indata$HLA==HLA_CLASS,]) %>% ggcuminc(outcome =  c("2"))+ ggplot2::scale_y_continuous(limits = c(0,1))+ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs(
+  x = "Time, years"
+  ) 
+```
+
+```{r }
+#| fig-cap: !expr glue::glue("            Relapse Incidenc within ", HLA_CLASS)
+
+tidycmprsk::cuminc(Surv(PFSY,factor(CRELAPSE))~ATG_PTCY,data=indata[indata$HLA==HLA_CLASS,]) %>% ggcuminc(outcome =  c("1"))+ ggplot2::scale_y_continuous(limits = c(0,1))+ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs(
+  x = "Time, years") 
+```
+
+#### GVH Related Outcomes (Cumulative Incidence)
+
+```{r }
+#| fig-cap: !expr glue::glue("            CGVH within  ", HLA_CLASS)
+
+tidycmprsk::cuminc(Surv(BMTCGVHY,factor(CCGVH))~ATG_PTCY,data=indata[indata$HLA==HLA_CLASS,]) %>%
+  ggcuminc(outcome =  c("1"))+ ggplot2::scale_y_continuous(limits = c(0,1))+ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs(
+  x = "Time, years" ) 
+```
+
+```{r }
+#| fig-cap: !expr glue::glue("            CGVH EXT within ", HLA_CLASS)
+
+tidycmprsk::cuminc(Surv(BMTCGVHEXTY,factor(CCGVHEXT))~ATG_PTCY,data=indata[indata$HLA==HLA_CLASS,]) %>% ggcuminc(outcome =  c("1"))+ ggplot2::scale_y_continuous(limits = c(0,1))+ggplot2::scale_x_continuous(breaks=   c(0,1, 2, 3, 4 ), limits = c(0,4.5)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs( x = "Time, years") 
+```
+
+```{r }
+#| fig-cap: !expr glue::glue("            Acute GVH Grade III/IV ", HLA_CLASS)
+
+tidycmprsk::cuminc(Surv(BMTAGV3,factor(CAGVH3))~ATG_PTCY,data=indata[indata$HLA==HLA_CLASS,]) %>% ggcuminc(outcome =  c("1"))+ ggplot2::scale_y_continuous(limits = c(0,1))+ ggplot2::scale_x_continuous(limits = c(0,200)) + add_risktable(
+  risktable_stats =
+    c("{n.risk}"),
+  stats_label = c("At Risk")
+) +labs(x = "Time, days") 
+```
+
+```{r }
+#| fig-cap: !expr glue::glue("   Acute GVH Grade II/IV ", HLA_CLASS)
+
+tidycmprsk::cuminc(Surv(BMTAGV2,factor(CAGVH2))~ATG_PTCY,data=indata[indata$HLA==HLA_CLASS,]) %>%
+  ggcuminc(outcome =  c("1"))+ ggplot2::scale_y_continuous(limits = c(0,1))+ ggplot2::scale_x_continuous( limits = c(0,200)) + add_risktable(
+  risktable_stats = "{n.risk}", 
+  stats_label =  "At Risk"  
+) + labs( 
+     x = "Time, days"
+  ) 
+
+```
+
+### Death Causes
+
+<!-- original disease, gvhd, infection, other HSCT related -->
+
+```{r}
+
+#indata <- dcfunction(indata)
+tbl_summary(
+    indata[indata$STATE==1 & indata$HLA==HLA_CLASS ,]%>% droplevels(),
+    include = c(DC_UPDATED ),
+    label = list(DC_UPDATED ~ "Categories"),
+    statistic =  all_categorical() ~ "{n} ({p}%)",
+    digits = all_categorical() ~ c(1, 2),
+    sort = list(everything() ~ "frequency"),
+    by = ATG_PTCY, # split table by group
+    missing = "ifany" # don't list missing data separately
+  ) %>%  modify_header(label = "**Causes**") %>% # update the column header
+  bold_labels()
+
+#reset_gtsummary_theme()
+#,VOD ~ "veno-occlusivedisease of the liver."
+```
+
+### Multivariate Cox Survival Analysis
+
+#### Mortality and Progression related outcomes
+
+```{r Cox Models Building mud}
+covars.adj <- c("ATG_PTCY","frailty(CENTRE)", "PATSEX"  ,"DONSEX1" ,  "AGETX",  "KARN90" ,  "DRI_ADJ" , "YEARTX","CMVDP1", "VRADICON","MYELOABRJEG" )
+
+
+surv.form <-  c(OS = "Surv(SURVY,STATE)~",
+                PFS = "Surv(PFSY,STATEPFS)~ ",
+                RI = "Surv(PFSY,factor(CRELAPSE))", #1
+                NRM ="Surv(PFSY,factor(CRELAPSE))", #2
+                GRFS ="Surv(BMTGRFSY,GRFS)",
+                CGVH = "Surv(BMTCGVH,factor(CCGVH))~", #"1" 
+                CGVH_EXT = "Surv(BMTCGVHEXT,factor(CCGVHEXT))~", #"1"
+                CAGVH34 = "(Surv(BMTAGV3,factor(CAGVH3))~", #"2" 
+                CAGVH24 = "(Surv(BMTAGV2,factor(CAGVH2))~" #"2" 
+)
+
+#Overall Survival
+event = "Surv(SURVY,STATE)~"
+cox_OS_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+
+#Progression Free Survival
+event = "Surv(PFSY,STATEPFS)~ "
+cox_PFS_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+
+#GRFS
+event = "Surv(BMTGRFSY,GRFS)~ "
+cox_GRFS_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+
+
+#Non Relapse Mortality
+event = "Surv(PFSY,factor(CRELAPSE) == '2')~ "
+cox_NRM_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+
+#Relapse Incidence
+event = "Surv(PFSY,factor(CRELAPSE) == '1')~ "
+cox_RPSE_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+
+
+#CGVH
+event = "Surv(BMTCGVH,factor(CCGVH) == '1')~ "
+cox_CGVH_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+ 
+
+#CCGVHEXT
+event = "Surv(BMTCGVHEXT,factor(CCGVHEXT) == '1')~ "
+cox_CGVHEXT_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+ 
+#AGVH3
+ event ="Surv(BMTAGV3,factor(CAGVH3)== '1')~"
+ cox_AGVH3_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+#  
+# #AGVH2
+ event = "Surv(BMTAGV2,factor(CAGVH2)== '1')~"
+ cox_AGVH2_9 <- coxph(as.formula(   paste0( event , paste(covars.adj, collapse=" + ")) ) ,data=indata[indata$HLA==HLA_CLASS,] )
+#  
+
+                # 
+                # CAGVH24 = "(Surv(BMTAGV2,factor(CAGVH2))~" #"2"
+ 
+
+```
+
+```{r}
+coxcoeff <- function(fit){ 
+  cox_model <- summary(fit)
+  frailty <-  any(grepl("frailty", row.names( cox_model$coefficients)))
+    
+  HR <- round( cox_model$conf.int[ ,"exp(coef)"] , 2)
+    HR.confint.lower <- round(cox_model$conf.int[,"lower .95"], 2)
+  HR.confint.upper <- round(cox_model$conf.int[,"upper .95"], 2)
+  
+  HR_txt <- paste0(HR, " (",HR.confint.lower, "-", HR.confint.upper, ")")
+  
+   return(cbind(Variable_level = row.names(cox_model$conf.int),HR_95CI = HR_txt))
+}
+
+
+cox_labels <- c(AGETX = 'Age at Transplant, yrs',  PATSEX  = "Patient Gender", "YEARTX"="Transplant Year", VRADICON = "TBI", MYELOABRJEG = "Myeloablative Conditioning", KARN90 = "Karnofsky =>90", DONSEX1 = "Donor Sex", CMVDP1 = "Donor to Patient CMV positivity", DRI_ADJ = "Disease Risk Index (DRI)")
+
+ 
+
+t1 <- cox_OS_9 %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty(")) %>% bold_labels() %>% bold_p(t = 0.10) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+#%>%  modify_caption("**Overall Survival MMUD** (N_events = {cox_OS_9$nevent})")
+
+t2 <- cox_PFS_9 %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.10) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+#%>% modify_caption("**PROGRESSION FREE Survival MMUD** (N_events = {cox_PFS_9$nevent})")
+
+
+
+t3 <- cox_NRM_9  %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.10) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+#%>% modify_caption("**Non Relapse Mortality** (N_events = {cox_NRM_9$nevent})")
+
+
+
+
+#Relapse Incidence
+#cox_RPSE_9 
+t4 <- cox_RPSE_9  %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.10) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+
+
+
+#Relapse Incidence
+#cox_RPSE_9 
+t5 <- cox_GRFS_9  %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.10) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+
+
+```
+
+```{r Merging output & Visuals mud}
+tbl_merge_ex1 <-tbl_merge(
+    tbls = list(t3,t4,t1, t2,t5),
+    tab_spanner = c("**Non Relapse Mortality NRM** *(N events = {cox_NRM_9$nevent})*","**Relapse Incidence RI** *(N events = {cox_RPSE_9$nevent})*","**Overall Survival OS** *(N events = {cox_OS_9$nevent})*", "**Progression Free Survival PFS** *(N events = {cox_PFS_9$nevent})*","**GRFS**  *(N events = {cox_GRFS_9$nevent})*")
+  )%>% modify_caption(paste0("**Multivariate Cox Analysis Survival Relapse Outcomes** ",HLA_CLASS))
+
+
+tbl_merge_ex1  %>% as_gt() %>%  gt::tab_style(    style =  gt::cell_borders(
+  sides =c( "l"),color = "royalblue",weight = gt::px(0.1)
+),
+locations =  list(gt::cells_body(  columns = starts_with("estimate")))
+) %>%  gt::tab_style(    style =  list(gt::cell_borders(
+  sides =c("b", "t"),color = "red",weight = gt::px(0.2)
+),gt::cell_fill(color = "#F9E3D6")),
+
+locations =  list(gt::cells_body( rows = c(3))
+))
+```
+
+#### GVH related Outcomes
+
+```{r}
+t11 <- cox_CGVH_9 %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty(")) %>% bold_labels() %>% bold_p(t = 0.10) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+#%>%  modify_caption("**Overall Survival MMUD** (N_events = {cox_OS_9$nevent})")
+
+t22 <- cox_CGVHEXT_9 %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.10) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+#%>% modify_caption("**PROGRESSION FREE Survival MMUD** (N_events = {cox_PFS_9$nevent})")
+
+
+
+t33 <- cox_AGVH2_9  %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.10) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+ 
+
+#Relapse Incidence
+#cox_RPSE_9 
+t44 <- cox_AGVH3_9  %>% tbl_regression(exponentiate = TRUE,label = cox_labels ,include = !starts_with("frailty("))%>% bold_labels() %>% bold_p(t = 0.10) %>%add_significance_stars(
+    hide_p = FALSE,
+    pattern = "{p.value}{stars}",
+    hide_se = TRUE
+  )
+```
+
+```{r}
+tbl_merge_ex2 <-
+  tbl_merge(
+    tbls = list(t11, t22, t33, t44),
+    
+      tab_spanner = c("**CGVH** *(N events = {cox_CGVH_9$nevent})*", "**CGVH EXT** *(N events = {cox_CGVHEXT_9$nevent})*","**aGVH-II/IV** *(N events = {cox_AGVH2_9$nevent})*","**aGVH-III/IV** *(N events = {cox_AGVH3_9$nevent})*")
+  )%>% modify_caption(paste0("**Multivariate Cox Analysis GVH Outcomes** ", HLA_CLASS))
+
+
+
+
+tbl_merge_ex2  %>% as_gt() %>%  gt::tab_style(    
+  style =  gt::cell_borders(
+    sides =c( "l"),color = "royalblue",weight = gt::px(0.1)
+  ),
+  locations =  list(gt::cells_body(  columns = starts_with("estimate")))
+)%>%  gt::tab_style(    style =  list(gt::cell_borders(
+      sides =c("b", "t"),color = "red",weight = gt::px(0.2)
+    ),gt::cell_fill(color = "#F9E3D6")),
+    
+    locations =  list(gt::cells_body( rows = c(3))
+))
+
+
+```
+
+::: {.callout-tip icon="false"}
+## MUD Adjusted Survival Analysis Results:
+
+-   PTCy alone demonstrated significantly better outcomes across six endpoints relatively to ATG: Overall Survival,Progression Free Survival, Non Relapse Mortality, Relapse Incidence, CGVH,CGVH EXT .
+
+-   No significant association with treatment strategy was apparent in Acute GVH related Outcomes.
+
+-   The observed hazard ratios of Acute GVH are in the same direction as the previous outcomes, which could indicate either no difference or a potential lack of power due to fewer events related to these outcomes.
+
+No relevant interaction has been found.
+:::
+
+Additionally e evaluated potential interactions between associated factors and exposition ATG/PTCy, with respect to the primary outcome NRM. These factors were individually assessed within multivariate Cox models, incorporating the interaction term. 
+No statistically significant or clinically meaningful interaction term has been found in both groups.
+
+------------------------------------------------------------------------
+
+<!--# aGVH 180 day in progress, treo flu thio ptcy , TO table(indata$SURV == 1, indata$STATE,indata$ATG_PTCY ,useNA = "always")-->
