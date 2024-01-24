@@ -1,3 +1,5 @@
+library(arsenal)
+
 # Make Exhaustif Labels Dictionary (Check Christophe Label, or mega SPSS file Name/Label)
 ## Enrich the Following
 labels <- c(AGETX = 'Age at Transplant, yrs',
@@ -22,7 +24,7 @@ labels <- c(AGETX = 'Age at Transplant, yrs',
             DONSEX1 = "Donor Sex", 
             "fct_infreq(PREVENTION_REGIMEN)" = "GVHD Prevention Regimen", 
             "fct_infreq(VCENLAND)" = "Center Country","
-            VCENLAND1"= "Center Country",
+            VCENLAND"= "Center Country",
             SORROR.CL = "SORROR Comorbidity Index", 
             HSCTYPE = "Type of Donor" , 
             CMVDP1 = "Donor to Patient CMV positivity", 
@@ -42,7 +44,7 @@ tab <- tableby( ~ PATSEX  + DONSEX1+
                   MYELOABRJEG + VRADICON +
                
                notest(fct_infreq(DISMCLFD_MAIN))+  notest(fct_infreq(DISEASE)) + notest(fct_infreq(DISEASE_SPE1))+ 
-               notest(fct_infreq(PREVENTION_REGIMEN)) + notest(fct_infreq(CONDITIONING_REGIMEN)) +  notest(  VCENLAND1)      
+               notest(fct_infreq(PREVENTION_REGIMEN)) + notest(fct_infreq(CONDITIONING_REGIMEN)) +  notest( fct_infreq( VCENLAND) )     
               , data= Data_HSCT, control=mycontrols  )
 
 summary(tab,
